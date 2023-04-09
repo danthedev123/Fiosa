@@ -9,10 +9,75 @@ import subprocess
 from datetime import date
 import platform
 import ttkthemes
+import sys
+import webbrowser
+
+
+def requestOpenAIKey():
+    global setKey
+    setKey = None
+    root = tk.Tk()
+    root.title("Enter OpenAI key")
+
+    prompt_label = tk.Label(root, text="Please enter your OpenAI API token. If you are unsure, press the help button for instructions and details :)")
+    prompt_label.pack()
+
+    input_entry = tk.Entry(root)
+    input_entry.pack()
+    input_entry.focus()
+
+
+    def submit():
+        global setKey
+        input_val = input_entry.get()
+        root.destroy()
+        setKey = input_val
+
+    submit_button = tk.Button(root, text="Submit", command=submit)
+    submit_button.pack()
+
+    def help():
+        webbrowser.open("https://www.example.com") # TODO Replace
+
+
+    help_button = tk.Button(root, text="Help", command=help)
+    help_button.pack()
+
+    root.mainloop()
+
+    return setKey
+
+def modifyOpenAIKey():
+    key = requestOpenAIKey()
+    data['openai_token'] = key
+
+    print(key)
+
+    jsonObj = json.dumps(data, indent=4)
+
+    with open("config.json", "w") as outfile:
+        outfile.write(jsonObj)
+
+
 
 longterm_memories_file = open("LongTermMemories.txt", 'r')
 longterm_memories = longterm_memories_file.read()
 longterm_memories_file.close()
+
+
+os_name = None
+os_type = None
+
+if (sys.platform == "linux"):
+    os_name = platform.freedesktop_os_release().get("NAME")
+    os_type = "linux"
+elif (sys.platform == "darwin"): # OSX/MacOS
+    os_name = "Darwin/OSX " + platform.mac_ver()[0]
+    os_type = "mac"
+else:
+    os_name = "Unknown (version unknown)"
+    os_type = "Unknown"
+
 
 def run_command(cmd):
     r = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE) # Grab the output of the command
@@ -61,10 +126,26 @@ data = json.load(f)
 
 commandPattern = r"\$\((.*?)\)"
 
-prompt_to_inject = data['prompt_to_inject'] + longterm_memories + "\nAdditional information: the current date is " + str(date.today()) # The AI's memories + the date.
+prompt_to_inject = None
+
+if (os_type == "linux"):
+    prompt_file = open("prompts/linux.txt")
+    prompt = prompt_file.read()
+    prompt_file.close()
+    prompt_to_inject = prompt + longterm_memories + "\nAdditional information: the current date is " + str(date.today()) # The AI's memories + the date.
+elif (os_type == "mac"):
+    prompt_file = open("prompts/mac.txt")
+    prompt = prompt_file.read()
+    prompt_file.close()
+    prompt_to_inject = prompt + longterm_memories + "\nAdditional information: the current date is " + str(date.today()) + " and the MacOS version is " + os_name # The AI's memories + the date.
+
 conversation_history = ""
 prompt_queue = queue.Queue()
 command_queue = queue.Queue()
+
+if (data['openai_token'] == ''):
+    modifyOpenAIKey()
+
 
 def run_prompt(systemPrompt, userPrompt, model): # The prompt, the OpenAI model to use, e.g gpt-3.5-turbo or davinci
         completion = openai.ChatCompletion.create(
@@ -79,17 +160,14 @@ class ChatWindow:
         self.master = master
         master.title("Fiosa")
 
-        self.settings_button = ttk.Button(master, text="⚙️")
+        self.settings_button = ttk.Button(master, text="⚙️", command=modifyOpenAIKey)
         self.settings_button.pack(side=tk.BOTTOM, anchor=tk.SE, padx=5, pady=5)
   
 
         self.chat_log = tk.Text(master)
         self.chat_log.pack(fill=tk.BOTH, expand=1)
 
-
-        style = ttk.Style()
-        style.configure("Custom.TEntry", fieldbackground='#252525', background='#252525', insertcolor='white', font=("DejaVu Sans", 12), padding=5)
-        self.message_entry = ttk.Entry(master, style="Custom.TEntry")
+        self.message_entry = ttk.Entry(master)
         self.message_entry.pack(side=tk.LEFT, padx=5, pady=5, fill=tk.X, expand=1)
         self.message_entry.configure(width=30)
 
@@ -134,27 +212,16 @@ class ChatWindow:
 # Your OpenAI key
 openai.api_key = data['openai_token']
 
-# Possible prompts:
-#   - Digital assistant: Hello ChatGPT. From now on, you are called DigiAssistant, and will assist the user in many different ways. For example, you can help them write essays or stories. Their prompt is below.\n\n
-#   - AI Companion: Hello ChatGPT. From now on, you can be an AI companion or friend to the user. You can play games with them, hold conversations with them, and more. Their prompt is below.\n\n
 
-
-# # Chat interface
-# while True:
-#   userinput = input("Prompt: ")
-
-
-#   print(completion.choices[0].message.content)
-#   if (userinput == "Quit" or userinput == "Goodbye" or userinput == "Bye" or userinput == "Bye!" or userinput == "Goodbye!"):
-#       break
-
-
-os_name = platform.freedesktop_os_release().get("NAME")
-
-if (os_name != "Ubuntu"):
+if (os_name != "Ubuntu" and os_type != "mac"):
     messagebox.showerror("System not supported!", "You are currently running " + os_name + ". Only Ubuntu is supported!")
 else:
-    root = ttkthemes.ThemedTk(theme="equilux")
+    root = None
+    if (os_type == "mac"):
+        root = tk.Tk() # MacOS actually has a good standard system toolkit (Cocoa) so we are OK with the system managing the theme
+    else: # Linux
+        root = ttkthemes.ThemedTk(theme="equilux")
+
     chat_window = ChatWindow(root)
 
     def handle_closing():
@@ -178,10 +245,6 @@ else:
 
         root.destroy()
 
-
-    root.tk_setPalette(background='#1E1E1E', foreground='white',
-                    activeBackground='gray30', activeForeground='white', 
-                    highlightBackground='#1E1E1E', highlightColor='white')
 
     style = ttk.Style()
 
