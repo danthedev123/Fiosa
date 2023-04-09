@@ -8,6 +8,7 @@ import queue
 import subprocess
 from datetime import date
 import platform
+import ttkthemes
 
 longterm_memories_file = open("LongTermMemories.txt", 'r')
 longterm_memories = longterm_memories_file.read()
@@ -46,9 +47,9 @@ def process_command_queue():
             #     conversation_history += "\n" + "[INTERNAL] Do not show to user: No output recieved from command."
 
             print("[DEBUG] Running completion")
-            completion = run_prompt(prompt_to_inject, conversation_history, "gpt-3.5-turbo")
+            completion = run_prompt(prompt_to_inject, conversation_history + "\n" + "Fiosa: ", "gpt-3.5-turbo")
             chat_window.chat_log.insert(tk.END, "\n" + completion.choices[0].message.content)
-            conversation_history = conversation_history + "\n" + "ChatGPT: " + completion.choices[0].message.content
+            conversation_history = conversation_history + "\n" + "Fiosa: " + completion.choices[0].message.content
             prompt_queue.put(conversation_history)
 
         except queue.Empty:
@@ -78,19 +79,25 @@ class ChatWindow:
         self.master = master
         master.title("Fiosa")
 
+        self.settings_button = ttk.Button(master, text="⚙️")
+        self.settings_button.pack(side=tk.BOTTOM, anchor=tk.SE, padx=5, pady=5)
+  
+
         self.chat_log = tk.Text(master)
         self.chat_log.pack(fill=tk.BOTH, expand=1)
 
+
         style = ttk.Style()
-        style.configure("Custom.TEntry", fieldbackground='#252525', background='#252525', insertcolor='white', font=("Roboto", 12), padding=5)
+        style.configure("Custom.TEntry", fieldbackground='#252525', background='#252525', insertcolor='white', font=("DejaVu Sans", 12), padding=5)
         self.message_entry = ttk.Entry(master, style="Custom.TEntry")
         self.message_entry.pack(side=tk.LEFT, padx=5, pady=5, fill=tk.X, expand=1)
         self.message_entry.configure(width=30)
-        style = ttk.Style()
-        style.configure("Custom.TButton", foreground="#ffffff", background="#339af0", font=("Roboto", 12), padding=5, width=8)
-        self.send_button = ttk.Button(master, text="Send", command=self.send_message, style="Custom.TButton")
+
+
+        self.send_button = ttk.Button(master, text="Send", command=self.send_message)
         self.send_button.pack(side=tk.RIGHT, padx=5, pady=5)
-  
+
+
 
         welcome = run_prompt(prompt_to_inject, "System: Write a couple of sentences introducing yourself to the user. Make sure to ask for their name so you know who they are.", "gpt-3.5-turbo")
 
@@ -105,7 +112,7 @@ class ChatWindow:
         self.message_entry.delete(0, tk.END)
         conversation_history = conversation_history + "\n" + "User: " + message
 
-        completion = run_prompt(prompt_to_inject, conversation_history, "gpt-3.5-turbo")
+        completion = run_prompt(prompt_to_inject, conversation_history + "\n" + "Fiosa: ", "gpt-3.5-turbo")
 
         self.chat_log.insert(tk.END, completion.choices[0].message.content)
         self.message_entry.delete(0, tk.END)
@@ -147,7 +154,7 @@ os_name = platform.freedesktop_os_release().get("NAME")
 if (os_name != "Ubuntu"):
     messagebox.showerror("System not supported!", "You are currently running " + os_name + ". Only Ubuntu is supported!")
 else:
-    root = tk.Tk()
+    root = ttkthemes.ThemedTk(theme="equilux")
     chat_window = ChatWindow(root)
 
     def handle_closing():
@@ -159,8 +166,8 @@ else:
             return
 
         message = "System: Hello Fiosa, this is the System. The user is closing you now, is there anything from the conversation you would like to add to your long term memories? Reply only with the memories themselves like this 'Memory: <the current date> <the memory>', nothing else as your response will be added directly into your memory database. Also, please only add this latest memory, don't write all of them again."
-        chat_window.chat_log.insert(tk.END, "\nFiosa: Goodbye, please wait while I save my memories of this conversation :)")
-        chat_window.message_entry.delete(0, tk.END)
+        # chat_window.chat_log.insert(tk.END, "\nFiosa: Goodbye, please wait while I save my memories of this conversation :)")
+        # chat_window.message_entry.delete(0, tk.END)
         conversation_history = conversation_history + "\n" + "User: " + message
 
         completion = run_prompt(prompt_to_inject, conversation_history, "gpt-3.5-turbo")
