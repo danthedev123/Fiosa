@@ -8,9 +8,16 @@ import queue
 import subprocess
 from datetime import date
 import platform
-import ttkthemes
 import sys
 import webbrowser
+
+def run_prompt(systemPrompt, userPrompt, model): # The prompt, the OpenAI model to use, e.g gpt-3.5-turbo or davinci
+        completion = openai.ChatCompletion.create(
+            model=model, # Latest GPT model
+            messages=[{"role": "system", "content": systemPrompt}, {"role": "user", "content": userPrompt}]
+        )
+
+        return completion
 
 
 def requestOpenAIKey():
@@ -58,8 +65,6 @@ def modifyOpenAIKey():
     with open("config.json", "w") as outfile:
         outfile.write(jsonObj)
 
-
-
 longterm_memories_file = open("LongTermMemories.txt", 'r')
 longterm_memories = longterm_memories_file.read()
 longterm_memories_file.close()
@@ -80,9 +85,15 @@ else:
 
 
 def run_command(cmd):
+    # completion = run_prompt(prompt_to_inject, "Tell them you are Fiosa, explain what this command does then ask the user if they want to run it: " + cmd, "gpt-3.5-turbo")
+    # whatcommanddoes = completion.choices[0].message.content
+    # b = messagebox.askyesno("Confirmation", "Run shell command: " + cmd + "\n" + whatcommanddoes)
+    # if (b):
     r = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE) # Grab the output of the command
     r.wait()
     return r
+    # else:
+    #     return "Command cancelled by user"
 
 def process_command_queue():
     global prompt_to_inject
@@ -91,27 +102,29 @@ def process_command_queue():
         try:
             cmd = command_queue.get(block=False)
             cmd_run = run_command(cmd)
-                
-            output = cmd_run.stdout.read().decode() # stdout
-            stderr = cmd_run.stderr
+            if (cmd_run != "Command cancelled by user"):
+                output = cmd_run.stdout.read().decode() # stdout
+                stderr = cmd_run.stderr
 
-            print("[DEBUG] Output: ", output)
-            if (output):
-                prompt_to_inject = prompt_queue.get()
-                if (cmd_run.returncode != 0):
-                    conversation_history += "\n" + "[INTERNAL] Do not show to user: Return code of command is not zero."
-                elif stderr:
-                    conversation_history += "\n" + "[INTERNAL] Do not show to user: Command returned error: " + stderr.read().decode()
-                elif output:
-                    conversation_history += "\n" + "[INTERNAL] Do not show to user: Command returned output: " + output
-                else:
-                    conversation_history += "\n" + "[INTERNAL] Do not show to user: Command produced no output or error."  
-            #     if (output != ""): # The AI gets confused if there's an empty command output
-            #         conversation_history += "\n" + "[INTERNAL] Do not show to user: Command output: " + output
-            # else:
-            #     conversation_history += "\n" + "[INTERNAL] Do not show to user: No output recieved from command."
+                print("[DEBUG] Output: ", output)
+                if (output):
+                    prompt_to_inject = prompt_queue.get()
+                    if (cmd_run.returncode != 0):
+                        conversation_history += "\n" + "[INTERNAL] Do not show to user: Return code of command is not zero."
+                    elif stderr:
+                        conversation_history += "\n" + "[INTERNAL] Do not show to user: Command returned error: " + stderr.read().decode()
+                    elif output:
+                        conversation_history += "\n" + "[INTERNAL] Do not show to user: Command returned output: " + output
+                    else:
+                        conversation_history += "\n" + "[INTERNAL] Do not show to user: Command produced no output or error."  
+                #     if (output != ""): # The AI gets confused if there's an empty command output
+                #         conversation_history += "\n" + "[INTERNAL] Do not show to user: Command output: " + output
+                # else:
+                #     conversation_history += "\n" + "[INTERNAL] Do not show to user: No output recieved from command."
 
-            print("[DEBUG] Running completion")
+                print("[DEBUG] Running completion")
+            else:
+                conversation_history += "\n" + "[INTERNAL] Do not show to user: Command cancelled by user"
             completion = run_prompt(prompt_to_inject, conversation_history + "\n" + "Fiosa: ", "gpt-3.5-turbo")
             chat_window.chat_log.insert(tk.END, "\n" + completion.choices[0].message.content)
             conversation_history = conversation_history + "\n" + "Fiosa: " + completion.choices[0].message.content
@@ -147,13 +160,6 @@ if (data['openai_token'] == ''):
     modifyOpenAIKey()
 
 
-def run_prompt(systemPrompt, userPrompt, model): # The prompt, the OpenAI model to use, e.g gpt-3.5-turbo or davinci
-        completion = openai.ChatCompletion.create(
-            model=model, # Latest GPT model
-            messages=[{"role": "system", "content": systemPrompt}, {"role": "user", "content": userPrompt}]
-        )
-
-        return completion
 
 class ChatWindow:
     def __init__(self, master):
@@ -214,13 +220,10 @@ openai.api_key = data['openai_token']
 
 
 if (os_name != "Ubuntu" and os_type != "mac"):
-    messagebox.showerror("System not supported!", "You are currently running " + os_name + ". Only Ubuntu is supported!")
+    messagebox.showerror("System not supported!", "You are currently running " + os_name + ". Only Ubuntu and MacOS are supported!")
 else:
-    root = None
-    if (os_type == "mac"):
-        root = tk.Tk() # MacOS actually has a good standard system toolkit (Cocoa) so we are OK with the system managing the theme
-    else: # Linux
-        root = ttkthemes.ThemedTk(theme="equilux")
+    root = tk.Tk() # MacOS actually has a good standard system toolkit (Cocoa) so we are OK with the system managing the theme
+
 
     chat_window = ChatWindow(root)
 
