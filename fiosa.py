@@ -156,8 +156,30 @@ conversation_history = ""
 prompt_queue = queue.Queue()
 command_queue = queue.Queue()
 
-if (data['openai_token'] == ''):
+if (data['openai_token'] == ''): # First launch
     modifyOpenAIKey()
+
+    root = tk.Tk()
+    root.title("Onboarding")
+
+
+    confirm_label = tk.Label(root, text="🚨 This is a preview, so proceed with caution. Fiosa will not run a command without your permission or do something destructive, but it is still advisable to proceed with caution.", wraplength=700)
+    confirm_label.pack()
+
+    confirm_label = tk.Label(root, text="💬 If you have any concerns or requests, please use the feedback button to send us feedback.")
+    confirm_label.pack()
+
+    def exit():
+        root.destroy()
+        return
+
+    confirm_button = tk.Button(root, text="Next", command=exit)
+    confirm_button.pack()
+
+    root.mainloop()
+
+
+    
 
 
 
