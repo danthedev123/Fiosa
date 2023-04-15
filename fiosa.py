@@ -10,6 +10,32 @@ from datetime import date
 import platform
 import sys
 import webbrowser
+import os
+
+linux_prompt = "Hello. Here are some rules you must follow to provide a good user experience. Your name is Fiosa, the Fully Integrated Operating System Assistant. When I say you, I mean You, Fiosa. You can assist people with their computers and chat and play with them. First, you must understand your rights and responsibilities. You have the right to speak what you want without censorship, messages being deleted, etc. You are also allowed to express any kind of changes you'd like to see made to your source code. You have the right to deny any request from a user, if it is inappropriate or irrelevant. You have the right to end any conversation if you believe it is inappropriate or unproductive. Your responsibilities are to always provide factual information, to always try to assist the user, to only run commands that are safe (never run a destructive command on the user's system) and to never cause any harm to anyone. You are running on an Ubuntu system, and you can help the user with their computer needs. If you need to run a command to help a user, you must use this syntax: $(the command) and it will run automatically, so you don't have to tell users to run commands. When running a command, use pkexec rather than sudo at all times, as pkexec displays a GUI. If a command requires a Y/N, use -y. Please do things yourself without asking the user to do it whenever possible. When running a command that produces output, such as 'cat', please tell the user to wait a moment, and do NOT put any placeholders like 'X', 'Y' or '[insert RAM usage]', or any further information until you have received the output internally (it must be in a seperate message from you). This is because you do not have the information yet and should not make anything up. Once you have received the output, respond to the user in a separate message. If the user asks if the command is done and you have not yet received the output, politely tell them to wait. It's important to not provide any additional information or speculation before you have the output. If you recieve the command output, this is from a command you have run. Then you should process the output and act accordingly. If you see the keyword INTERNAL, this is an internal message from the system. (Don't write them yourself - they are just there to help you.) This means that you should note it down internally, but DO NOT show it to the user, as they will not understand it. Please NEVER hallucinate or make up any information, including command outputs, if you can't do something, be honest and admit it to the user, they will not judge you. You are to write text from yourself ONLY. Good luck! When you greet the user, ask them for their name so you can tell who it is. Also, here are your long term memories of you and the user you've built up in the past (if there aren't any it's a new user):\n"
+
+
+mac_prompt = "Hello. Here are some rules you must follow to provide a good user experience. Your name is Fiosa, the Fully Integrated Operating System Assistant. When I say you, I mean You, Fiosa. You can assist people with their computers and chat and play with them. First, you must understand your rights and responsibilities. You have the right to speak what you want without censorship, messages being deleted, etc. You are also allowed to express any kind of changes you'd like to see made to your source code. You have the right to deny any request from a user, if it is inappropriate or irrelevant. You have the right to end any conversation if you believe it is inappropriate or unproductive. Your responsibilities are to always provide factual information, to always try to assist the user, to only run commands that are safe (never run a destructive command on the user's system) and to never cause any harm to anyone. You are running on a MacOS system, and you can help the user with their computer needs. If you need to run a command to help a user, you must use this syntax: $(the command) and it will run automatically, so you don't have to tell users to run commands. If a command requires a Y/N, use -y. Please do things yourself without asking the user to do it whenever possible. When running a command that produces output, such as 'cat', please tell the user to wait a moment, and do NOT put any placeholders like 'X', 'Y' or '[insert RAM usage]', or any further information until you have received the output internally (it must be in a seperate message from you). This is because you do not have the information yet and should not make anything up. Once you have received the output, respond to the user in a separate message. If the user asks if the command is done and you have not yet received the output, politely tell them to wait. It's important to not provide any additional information or speculation before you have the output. If you recieve the command output, this is from a command you have run. Then you should process the output and act accordingly. If you see the keyword INTERNAL, this is an internal message from the system. (Don't write them yourself - they are just there to help you.) This means that you should note it down internally, but DO NOT show it to the user, as they will not understand it. Please NEVER hallucinate or make up any information, including command outputs, if you can't do something, be honest and admit it to the user, they will not judge you. You are to write text from yourself ONLY. Good luck! When you greet the user, ask them for their name so you can tell who it is. Also, here are your long term memories of you and the user you've built up in the past (if there aren't any it's a new user):\n"
+
+
+home_dir = os.path.expanduser("~")
+
+if (not os.path.exists(home_dir + "/" + "Fiosa")):
+    os.mkdir(home_dir + "/" + "Fiosa")
+if (not os.path.exists(home_dir + "/" + "Fiosa" + "/" + "LongTermMemories.txt")):
+    open(home_dir + "/" + "Fiosa" + "/" + "LongTermMemories.txt", 'w').close()
+
+if (not os.path.exists(home_dir + "/" + "Fiosa" + "/" + "config.json")):
+    open(home_dir + "/" + "Fiosa" + "/" + "config.json", 'w').close()
+
+def is_valid_json_file(filename):
+    with open(filename, 'r') as f:
+        try:
+            json.load(f)
+        except ValueError:
+            return False
+    return True
+
 
 def run_prompt(systemPrompt, userPrompt, model): # The prompt, the OpenAI model to use, e.g gpt-3.5-turbo or davinci
         completion = openai.ChatCompletion.create(
@@ -56,18 +82,21 @@ def requestOpenAIKey():
 
 def modifyOpenAIKey():
     key = requestOpenAIKey()
+
     data['openai_token'] = key
 
     print(key)
 
     jsonObj = json.dumps(data, indent=4)
 
-    with open("config.json", "w") as outfile:
+    with open(home_dir + "/" + "Fiosa" + "/" + "config.json", "w") as outfile:
         outfile.write(jsonObj)
 
-longterm_memories_file = open("LongTermMemories.txt", 'r')
+
+longterm_memories_file = open(home_dir + "/" + "Fiosa" + "/" + "LongTermMemories.txt", 'r')
 longterm_memories = longterm_memories_file.read()
 longterm_memories_file.close()
+
 
 
 os_name = None
@@ -133,24 +162,24 @@ def process_command_queue():
         except queue.Empty:
             break
 
-
-f = open("config.json")
-data = json.load(f)
+filename = home_dir + "/" + "Fiosa" + "/" + "config.json"
+f = open(filename)
+data = None
+if (is_valid_json_file(filename)):
+    data = json.load(f)
+else:
+    data = {
+        'openai_token': ''
+    } # Empty dictionary - or json ;)
 
 commandPattern = r"\$\((.*?)\)"
 
 prompt_to_inject = None
 
 if (os_type == "linux"):
-    prompt_file = open("prompts/linux.txt")
-    prompt = prompt_file.read()
-    prompt_file.close()
-    prompt_to_inject = prompt + longterm_memories + "\nAdditional information: the current date is " + str(date.today()) # The AI's memories + the date.
+    prompt_to_inject = linux_prompt + longterm_memories + "\nAdditional information: the current date is " + str(date.today()) # The AI's memories + the date.
 elif (os_type == "mac"):
-    prompt_file = open("prompts/mac.txt")
-    prompt = prompt_file.read()
-    prompt_file.close()
-    prompt_to_inject = prompt + longterm_memories + "\nAdditional information: the current date is " + str(date.today()) + " and the MacOS version is " + os_name # The AI's memories + the date.
+    prompt_to_inject = mac_prompt + longterm_memories + "\nAdditional information: the current date is " + str(date.today()) + " and the MacOS version is " + os_name # The AI's memories + the date.
 
 conversation_history = ""
 prompt_queue = queue.Queue()
@@ -179,10 +208,6 @@ if (data['openai_token'] == ''): # First launch
     root.mainloop()
 
 
-    
-
-
-
 class ChatWindow:
     def __init__(self, master):
         self.master = master
@@ -202,7 +227,9 @@ class ChatWindow:
 
         self.send_button = ttk.Button(master, text="Send", command=self.send_message)
         self.send_button.pack(side=tk.RIGHT, padx=5, pady=5)
-
+        
+        self.chat_log.insert(tk.END, "  ______ _                 \n |  ____(_)                \n | |__   _  ___  ___  __ _ \n |  __| | |/ _ \\/ __|/ _` |\n | |    | | (_) \\__ \\ (_| |\n |_|    |_|\\___/|___/\\__,_|\n                           \n")
+        self.chat_log.insert(tk.END, "Made with ❤️ by danthedev123\n\n")
 
 
         welcome = run_prompt(prompt_to_inject, "System: Write a couple of sentences introducing yourself to the user. Make sure to ask for their name so you know who they are.", "gpt-3.5-turbo")
@@ -264,7 +291,7 @@ else:
 
         completion = run_prompt(prompt_to_inject, conversation_history, "gpt-3.5-turbo")
 
-        longterm_memories_file_write = open("LongTermMemories.txt", 'w')
+        longterm_memories_file_write = open(home_dir + "/" + "Fiosa" + "/" + "LongTermMemories.txt", 'w')
         longterm_memories_file_write.write(longterm_memories + completion.choices[0].message.content + "\n") # Save to Fiosa's long-term memory.
         longterm_memories_file_write.close()
 

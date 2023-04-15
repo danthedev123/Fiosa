@@ -1,0 +1,1 @@
+python3 -m PyInstaller --onefile fiosa.py
