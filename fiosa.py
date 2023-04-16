@@ -70,7 +70,7 @@ def requestOpenAIKey():
     submit_button.pack()
 
     def help():
-        webbrowser.open("https://www.example.com") # TODO Replace
+        webbrowser.open("https://danthedev123.github.io/Fiosa/page2.html")
 
 
     help_button = tk.Button(root, text="Help", command=help)
