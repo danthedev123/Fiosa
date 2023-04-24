@@ -25,5 +25,5 @@ Download the source code and run fiosa.py (python3 fiosa.py) after installing al
 - [ ] Port/test on other Linux distributions
 - [ ] Voice-to-text and text-to-speech (kind of like Siri or Alexa)
 - [ ] Ability to know what is currently running/onscreen to better know how to assist user
-- [ ] Consider porting to Darwin/OSX
+- [x] Consider porting to Darwin/OSX (Ported!)
 - [ ] Heck, even port it to *Windows*?
